@@ -102,17 +102,17 @@ impl Hash for Uri {
 pub use std::fs::canonicalize as strict_canonicalize;
 
 /// On Windows, rewrites the wide path prefix `\\?\C:` to `C:`
-/// Source: https://stackoverflow.com/a/70970317
+/// Source: <https://stackoverflow.com/a/70970317>
 #[inline]
 #[cfg(windows)]
 fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
     use std::io;
 
-    fn impl_(path: PathBuf) -> std::io::Result<PathBuf> {
+    fn impl_(path: &Path) -> std::io::Result<PathBuf> {
         let head = path
             .components()
             .next()
-            .ok_or(io::Error::other("empty path"))?;
+            .ok_or_else(|| io::Error::other("empty path"))?;
         let disk_;
         let head = if let std::path::Component::Prefix(prefix) = head {
             if let std::path::Prefix::VerbatimDisk(disk) = prefix.kind() {
@@ -120,7 +120,7 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
                 Path::new(&disk_)
                     .components()
                     .next()
-                    .ok_or(io::Error::other("failed to parse disk component"))?
+                    .ok_or_else(|| io::Error::other("failed to parse disk component"))?
             } else {
                 head
             }
@@ -133,7 +133,7 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
     }
 
     let canon = std::fs::canonicalize(path)?;
-    impl_(canon)
+    impl_(&canon)
 }
 
 #[cfg(windows)]
@@ -143,7 +143,7 @@ fn capitalize_drive_letter(path: &str) -> String {
         let mut chars = path.chars();
         let drive_letter = chars.next().unwrap().to_ascii_uppercase();
         let rest: String = chars.collect();
-        format!("{}{}", drive_letter, rest)
+        format!("{drive_letter}{rest}")
     } else {
         path.to_string()
     }
